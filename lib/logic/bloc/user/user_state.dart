@@ -4,32 +4,37 @@ import '../../../data/models/user_model.dart';
 enum UserStatus { initial, loading, success, failure }
 
 class UserState extends Equatable {
-  final UserStatus status;
   final List<User> users;
+  final List<User> allUsers; // 🆕 new field to store all fetched users
   final bool hasReachedMax;
+  final UserStatus status;
   final String? error;
 
   const UserState({
-    this.status = UserStatus.initial,
     this.users = const [],
+    this.allUsers = const [],
     this.hasReachedMax = false,
+    this.status = UserStatus.initial,
     this.error,
   });
 
   UserState copyWith({
-    UserStatus? status,
     List<User>? users,
+    List<User>? allUsers,
     bool? hasReachedMax,
+    UserStatus? status,
     String? error,
   }) {
     return UserState(
-      status: status ?? this.status,
       users: users ?? this.users,
+      allUsers: allUsers ?? this.allUsers,
       hasReachedMax: hasReachedMax ?? this.hasReachedMax,
-      error: error ?? this.error,
+      status: status ?? this.status,
+      error: error,
     );
   }
 
   @override
-  List<Object?> get props => [status, users, hasReachedMax, error];
+  List<Object?> get props => [users, allUsers, hasReachedMax, status, error];
 }
+

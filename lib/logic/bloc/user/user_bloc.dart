@@ -17,38 +17,59 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   }
 
   Future<void> _onFetchUsers(FetchUsers event, Emitter<UserState> emit) async {
+    if (state.hasReachedMax && !event.isInitialLoad) return;
+
     if (event.isInitialLoad) {
-      emit(state.copyWith(status: UserStatus.loading));
       _skip = 0;
       _currentSearch = event.searchQuery;
+
+      emit(state.copyWith(
+        status: UserStatus.loading,
+        users: [],
+        allUsers: [],
+        hasReachedMax: false,
+        error: null,
+      ));
     }
 
     try {
-      final users = await userService.fetchUsers(
-        limit: _limit,
-        skip: _skip,
-        search: _currentSearch,
-      );
+      // Fetch next batch of users
+      final fetchedUsers = await userService.fetchUsers(limit: 100, skip: _skip);
 
-      if (users.isEmpty) {
-        emit(state.copyWith(
-          status: UserStatus.success,
-          hasReachedMax: true,
-        ));
-      } else {
-        _skip += _limit;
-        emit(state.copyWith(
-          status: UserStatus.success,
-          users: [...state.users, ...users],
-          hasReachedMax: false,
-        ));
-      }
+      // Update skip for next pagination
+      _skip += fetchedUsers.length;
+
+      // Append new users to existing list
+      final updatedAllUsers = event.isInitialLoad
+          ? fetchedUsers
+          : [...state.allUsers, ...fetchedUsers];
+
+      // Local search filter
+      final visibleUsers = (_currentSearch?.isNotEmpty ?? false)
+          ? updatedAllUsers.where((user) =>
+              user.firstName.toLowerCase().contains(_currentSearch!.toLowerCase()) ||
+              user.lastName.toLowerCase().contains(_currentSearch!.toLowerCase()))
+              .toList()
+          : updatedAllUsers;
+
+      emit(state.copyWith(
+        status: UserStatus.success,
+        users: visibleUsers,
+        allUsers: updatedAllUsers,
+        hasReachedMax: fetchedUsers.length < _limit,
+        error: null,
+      ));
+      print('Fetched: ${fetchedUsers.length}');
+print('Total in allUsers: ${updatedAllUsers.length}');
+print('Visible after search: ${visibleUsers.length}');
+
     } catch (e) {
       emit(state.copyWith(
         status: UserStatus.failure,
         error: e.toString(),
       ));
     }
+    
   }
 
   Future<void> _onRefreshUsers(RefreshUsers event, Emitter<UserState> emit) async {
@@ -58,6 +79,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       emit(state.copyWith(
         status: UserStatus.success,
         users: users,
+        allUsers: users,
         hasReachedMax: false,
       ));
     } catch (e) {
