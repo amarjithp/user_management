@@ -12,7 +12,13 @@ class UserDetailBloc extends Bloc<UserDetailEvent, UserDetailState> {
 
   UserDetailBloc() : super(const UserDetailState()) {
     on<LoadUserDetail>(_onLoadDetail);
+
+    on<AddNewPost>((event, emit) {
+      final updatedPosts = List<Post>.from(state.posts)..insert(0, event.newPost);
+      emit(state.copyWith(posts: updatedPosts));
+    });
   }
+
 
   Future<void> _onLoadDetail(
       LoadUserDetail event, Emitter<UserDetailState> emit) async {

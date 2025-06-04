@@ -87,24 +87,30 @@ class _UserListScreenState extends State<UserListScreen> {
                   return const Center(child: Text("No users found."));
                 }
 
-                return ListView.builder(
-                  controller: _scrollController,
-                  itemCount: state.hasReachedMax
-                      ? state.users.length
-                      : state.users.length + 1,
-                  itemBuilder: (context, index) {
-                    if (index >= state.users.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    return UserTile(user: state.users[index]);
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<UserBloc>().add(const FetchUsers(isInitialLoad: true));
                   },
+                  child: ListView.builder(
+                    controller: _scrollController,
+                    itemCount: state.hasReachedMax
+                        ? state.users.length
+                        : state.users.length + 1,
+                    itemBuilder: (context, index) {
+                      if (index >= state.users.length) {
+                        return const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 16.0),
+                          child: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      return UserTile(user: state.users[index]);
+                    },
+                  ),
                 );
               },
             ),
           ),
+
         ],
       ),
     );
