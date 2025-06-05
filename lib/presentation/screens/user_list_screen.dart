@@ -5,6 +5,7 @@ import '../../logic/bloc/user/user_bloc.dart';
 import '../../logic/bloc/user/user_event.dart';
 import '../../logic/bloc/user/user_state.dart';
 import '../widgets/user_tile.dart';
+import '../../logic/cubit/theme_cubit.dart';
 
 class UserListScreen extends StatefulWidget {
   const UserListScreen({Key? key}) : super(key: key);
@@ -56,7 +57,22 @@ class _UserListScreenState extends State<UserListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Users")),
+      appBar: AppBar(
+        title: const Text("Users"),
+        actions: [
+          BlocBuilder<ThemeCubit, ThemeMode>(
+            builder: (context, themeMode) {
+              final isDark = themeMode == ThemeMode.dark;
+              return IconButton(
+                icon: Icon(isDark ? Icons.dark_mode : Icons.light_mode),
+                onPressed: () {
+                  context.read<ThemeCubit>().toggleTheme(!isDark);
+                },
+              );
+            },
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(
