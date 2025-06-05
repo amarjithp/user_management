@@ -33,18 +33,15 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     }
 
     try {
-      // Fetch next batch of users
+      // Try fetching from API
       final fetchedUsers = await userService.fetchUsers(limit: 100, skip: _skip);
 
-      // Update skip for next pagination
       _skip += fetchedUsers.length;
 
-      // Append new users to existing list
       final updatedAllUsers = event.isInitialLoad
           ? fetchedUsers
           : [...state.allUsers, ...fetchedUsers];
 
-      // Local search filter
       final visibleUsers = (_currentSearch?.isNotEmpty ?? false)
           ? updatedAllUsers.where((user) =>
               user.firstName.toLowerCase().contains(_currentSearch!.toLowerCase()) ||
@@ -59,18 +56,35 @@ class UserBloc extends Bloc<UserEvent, UserState> {
         hasReachedMax: fetchedUsers.length < _limit,
         error: null,
       ));
-      print('Fetched: ${fetchedUsers.length}');
-print('Total in allUsers: ${updatedAllUsers.length}');
-print('Visible after search: ${visibleUsers.length}');
-
     } catch (e) {
-      emit(state.copyWith(
-        status: UserStatus.failure,
-        error: e.toString(),
-      ));
+      // On error, try fetching from cache
+      final cachedUsers = userService.getCachedUsers();
+
+      if (cachedUsers.isNotEmpty) {
+        final visibleUsers = (_currentSearch?.isNotEmpty ?? false)
+            ? cachedUsers.where((user) =>
+                user.firstName.toLowerCase().contains(_currentSearch!.toLowerCase()) ||
+                user.lastName.toLowerCase().contains(_currentSearch!.toLowerCase()))
+                .toList()
+            : cachedUsers;
+
+        emit(state.copyWith(
+          status: UserStatus.success,
+          users: visibleUsers,
+          allUsers: cachedUsers,
+          hasReachedMax: true, // no pagination on cached data
+          error: 'Loaded cached data due to error: $e',
+        ));
+      } else {
+        // No cached data, emit failure
+        emit(state.copyWith(
+          status: UserStatus.failure,
+          error: e.toString(),
+        ));
+      }
     }
-    
   }
+
 
   Future<void> _onRefreshUsers(RefreshUsers event, Emitter<UserState> emit) async {
     _skip = 0;
